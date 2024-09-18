@@ -84,11 +84,11 @@
             const { alpha, beta, gamma } = event;
 
             // Update target rotation and position based on device orientation
-            targetRotationX = beta * 0.01;   // Use `beta` (tilting forward/backward)
-            targetRotationY = gamma * 0.01;  // Use `gamma` (tilting left/right)
+            targetRotationX = beta * 0.05;   // Use `beta` (tilting forward/backward)
+            targetRotationY = gamma * 0.05;  // Use `gamma` (tilting left/right)
 
-            targetPositionX = gamma * 0.01;  // Move horizontally with left/right tilt
-            targetPositionY = beta * 0.01;   // Move vertically with forward/backward tilt
+            targetPositionX = gamma * 0.05;  // Move horizontally with left/right tilt
+            targetPositionY = beta * 0.05;   // Move vertically with forward/backward tilt
         }
 
         // Listen for device orientation events (for mobile)

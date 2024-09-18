@@ -63,10 +63,10 @@
         let windowHalfX = window.innerWidth / 2;
         let windowHalfY = window.innerHeight / 2;
 
-        // Load the Fox GLTF model
+        // Load the Fox GLTF model from URL
         const loader = new GLTFLoader();
         loader.load(
-            './models/Fox.gltf',  // Local path to your Fox.gltf file
+            'https://14542817.fs1.hubspotusercontent-na1.net/hubfs/14542817/3d%20model%20files/fox_test/Fox.gltf',  // Online GLTF file
             function (gltf) {
                 model = gltf.scene;
                 scene.add(model);

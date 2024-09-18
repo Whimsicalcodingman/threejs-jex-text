@@ -7,12 +7,34 @@
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            font-family: sans-serif;
+        }
+        #permissionButton {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
+    <div id="info">
+        <button id="permissionButton" style="display:none;">Enable Gyroscope</button>
+        <p id="status">Waiting for gyroscope data...</p>
+    </div>
+
     <script type="module">
-        // Import Three.js and GLTFLoader from CDN
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { GLTFLoader } from 'https://unpkg.com/three@0.126.1/examples/jsm/loaders/GLTFLoader.js';
         
@@ -24,28 +46,27 @@
         document.body.appendChild(renderer.domElement);
 
         // Add lighting
-        const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+        const ambientLight = new THREE.AmbientLight(0x404040); 
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(5, 5, 5);
         scene.add(directionalLight);
 
-        // Variables to track device orientation
         let targetRotationX = 0, targetRotationY = 0;
         let targetPositionX = 0, targetPositionY = 0;
-        
-        // Load the GLTF model
-        const loader = new GLTFLoader();
         let model;
+        let initialBeta = 0, initialGamma = 0;  // To store the initial orientation when starting
+        let initialSet = false;  // To check if initial orientation is set
+        const sensitivity = 0.03;  // Adjust this to increase the sensitivity of the movement
 
+        const loader = new GLTFLoader();
         loader.load(
             'https://14542817.fs1.hubspotusercontent-na1.net/hubfs/14542817/3d%20model%20files/ims%20test.gltf',  
             function (gltf) {
                 model = gltf.scene;
                 scene.add(model);
 
-                // Position the model at the center
                 model.position.set(0, 0, 0);
                 model.scale.set(1, 1, 1);
 
@@ -59,48 +80,67 @@
             }
         );
 
-        // Set camera position
         camera.position.z = 5;
 
-        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // Smoothly interpolate the rotation and position towards the target values
             if (model) {
-                model.rotation.x += (targetRotationX - model.rotation.x) * 0.05;  // Smooth rotation on X axis
-                model.rotation.y += (targetRotationY - model.rotation.y) * 0.05;  // Smooth rotation on Y axis
+                model.rotation.x += (targetRotationX - model.rotation.x) * 0.1;  // Smooth rotation on X axis
+                model.rotation.y += (targetRotationY - model.rotation.y) * 0.1;  // Smooth rotation on Y axis
 
-                model.position.x += (targetPositionX - model.position.x) * 0.05;  // Smooth position on X axis
-                model.position.y += (targetPositionY - model.position.y) * 0.05;  // Smooth position on Y axis
+                model.position.x += (targetPositionX - model.position.x) * 0.1;  // Smooth position on X axis
+                model.position.y += (targetPositionY - model.position.y) * 0.1;  // Smooth position on Y axis
             }
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Device orientation handler
+        // Gyroscope handler
         function handleDeviceOrientation(event) {
-            const { alpha, beta, gamma } = event;
+            const { beta, gamma } = event;
 
-            // Update target rotation and position based on device orientation
-            targetRotationX = beta * 0.05;   // Use `beta` (tilting forward/backward)
-            targetRotationY = gamma * 0.05;  // Use `gamma` (tilting left/right)
+            // Set initial orientation offset when the data is first received
+            if (!initialSet) {
+                initialBeta = beta;
+                initialGamma = gamma;
+                initialSet = true;
+            }
 
-            targetPositionX = gamma * 0.05;  // Move horizontally with left/right tilt
-            targetPositionY = beta * 0.05;   // Move vertically with forward/backward tilt
+            // Normalize the rotation and position by subtracting the initial orientation
+            targetRotationX = (beta - initialBeta) * sensitivity;  // Use normalized beta
+            targetRotationY = (gamma - initialGamma) * sensitivity;  // Use normalized gamma
+
+            targetPositionX = (gamma - initialGamma) * sensitivity;  
+            targetPositionY = (beta - initialBeta) * sensitivity;
+
+            document.getElementById('status').innerText = `Gyroscope data: beta=${beta.toFixed(2)}, gamma=${gamma.toFixed(2)}`;
         }
 
-        // Listen for device orientation events (for mobile)
-        window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+        // Request device orientation permission for iOS 13+ devices
+        function requestPermission() {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                const button = document.getElementById('permissionButton');
+                button.style.display = 'block';
+                button.addEventListener('click', function () {
+                    DeviceMotionEvent.requestPermission()
+                        .then((response) => {
+                            if (response === 'granted') {
+                                window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+                                button.style.display = 'none';  // Hide the button after permission is granted
+                            }
+                        })
+                        .catch(console.error);
+                });
+            } else {
+                // Non-iOS devices or older versions that don't need permission
+                window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+            }
+        }
 
-        // Reset model's position and rotation smoothly when window loses focus
-        window.addEventListener('blur', () => {
-            targetRotationX = 0;
-            targetRotationY = 0;
-            targetPositionX = 0;
-            targetPositionY = 0;
-        });
+        // Start requesting permission for device orientation
+        requestPermission();
 
         // Handle window resize
         window.addEventListener('resize', () => {

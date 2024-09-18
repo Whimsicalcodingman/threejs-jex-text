@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js with Gyroscope Interaction</title>
+    <title>Three.js with Mouse and Gyroscope Interaction</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -31,7 +31,7 @@
 
     <div id="info">
         <button id="permissionButton" style="display:none;">Enable Gyroscope</button>
-        <p id="status">Waiting for gyroscope data...</p>
+        <p id="status">Waiting for interaction...</p>
     </div>
 
     <script type="module">
@@ -56,9 +56,11 @@
         let targetRotationX = 0, targetRotationY = 0;
         let targetPositionX = 0, targetPositionY = 0;
         let model;
-        let initialBeta = 0, initialGamma = 0;  // To store the initial orientation when starting
-        let initialSet = false;  // To check if initial orientation is set
-        const sensitivity = 0.03;  // Adjust this to increase the sensitivity of the movement
+        let initialBeta = 0, initialGamma = 0;
+        let initialSet = false;
+        const sensitivity = 0.03;
+        let windowHalfX = window.innerWidth / 2;
+        let windowHalfY = window.innerHeight / 2;
 
         const loader = new GLTFLoader();
         loader.load(
@@ -97,22 +99,29 @@
         }
         animate();
 
-        // Gyroscope handler
+        // Mouse interaction for desktop
+        function onDocumentMouseMove(event) {
+            targetRotationY = (event.clientX - windowHalfX) / windowHalfX * 0.5;
+            targetRotationX = (event.clientY - windowHalfY) / windowHalfY * 0.5;
+
+            targetPositionX = (event.clientX - windowHalfX) / windowHalfX * 0.5;
+            targetPositionY = -(event.clientY - windowHalfY) / windowHalfY * 0.5;
+        }
+
+        // Gyroscope interaction for mobile
         function handleDeviceOrientation(event) {
             const { beta, gamma } = event;
 
-            // Set initial orientation offset when the data is first received
             if (!initialSet) {
                 initialBeta = beta;
                 initialGamma = gamma;
                 initialSet = true;
             }
 
-            // Normalize the rotation and position by subtracting the initial orientation
-            targetRotationX = (beta - initialBeta) * sensitivity;  // Use normalized beta
-            targetRotationY = (gamma - initialGamma) * sensitivity;  // Use normalized gamma
+            targetRotationX = (beta - initialBeta) * sensitivity;
+            targetRotationY = (gamma - initialGamma) * sensitivity;
 
-            targetPositionX = (gamma - initialGamma) * sensitivity;  
+            targetPositionX = (gamma - initialGamma) * sensitivity;
             targetPositionY = (beta - initialBeta) * sensitivity;
 
             document.getElementById('status').innerText = `Gyroscope data: beta=${beta.toFixed(2)}, gamma=${gamma.toFixed(2)}`;
@@ -128,7 +137,7 @@
                         .then((response) => {
                             if (response === 'granted') {
                                 window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-                                button.style.display = 'none';  // Hide the button after permission is granted
+                                button.style.display = 'none';  // Hide button after permission is granted
                             }
                         })
                         .catch(console.error);
@@ -139,11 +148,22 @@
             }
         }
 
-        // Start requesting permission for device orientation
-        requestPermission();
+        // Detect whether to use mouse or gyroscope based on device type
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+        }
+
+        if (isMobile()) {
+            requestPermission();  // Use gyroscope for mobile devices
+        } else {
+            document.addEventListener('mousemove', onDocumentMouseMove, false);  // Use mouse interaction for desktop
+        }
 
         // Handle window resize
         window.addEventListener('resize', () => {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js with Mouse and Gyroscope Interaction</title>
+    <title>Three.js with Mouse and Gyroscope Interaction and Animated Fox</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -55,6 +55,7 @@
 
         let targetRotationX = 0, targetRotationY = 0;
         let targetPositionX = 0, targetPositionY = 0;
+        let mixer;  // To handle the model animation
         let model;
         let initialBeta = 0, initialGamma = 0;
         let initialSet = false;
@@ -62,30 +63,45 @@
         let windowHalfX = window.innerWidth / 2;
         let windowHalfY = window.innerHeight / 2;
 
+        // Load the Fox GLTF model
         const loader = new GLTFLoader();
         loader.load(
-            'https://14542817.fs1.hubspotusercontent-na1.net/hubfs/14542817/3d%20model%20files/ims%20test.gltf',  
+            './models/Fox.gltf',  // Local path to your Fox.gltf file
             function (gltf) {
                 model = gltf.scene;
                 scene.add(model);
 
-                model.position.set(0, 0, 0);
-                model.scale.set(1, 1, 1);
+                // Initialize the animation mixer for the model
+                mixer = new THREE.AnimationMixer(model);
+                gltf.animations.forEach((clip) => {
+                    mixer.clipAction(clip).play();  // Play all available animations
+                });
 
-                console.log('Model loaded successfully:', model);
+                // Position and scale the model in the scene
+                model.position.set(0, 0, 0);
+                model.scale.set(0.025, 0.025, 0.025);  // Adjust scale for the Fox model
+
+                console.log('Fox model and animations loaded successfully:', model);
             },
             function (xhr) {
                 console.log((xhr.loaded / xhr.total * 100) + '% loaded');
             },
             function (error) {
-                console.error('An error occurred while loading the model:', error);
+                console.error('An error occurred while loading the Fox model:', error);
             }
         );
 
         camera.position.z = 5;
 
+        const clock = new THREE.Clock();
+
         function animate() {
             requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            // Update the animation mixer
+            if (mixer) mixer.update(delta);
 
             if (model) {
                 model.rotation.x += (targetRotationX - model.rotation.x) * 0.1;  // Smooth rotation on X axis

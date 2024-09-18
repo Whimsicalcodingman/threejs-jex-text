@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js with Smooth Mouse Interaction</title>
+    <title>Three.js with Gyroscope Interaction</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -31,13 +31,10 @@
         directionalLight.position.set(5, 5, 5);
         scene.add(directionalLight);
 
-        // Variables to track mouse position and target rotations
-        let mouseX = 0, mouseY = 0;
+        // Variables to track device orientation
         let targetRotationX = 0, targetRotationY = 0;
         let targetPositionX = 0, targetPositionY = 0;
-        let windowHalfX = window.innerWidth / 2;
-        let windowHalfY = window.innerHeight / 2;
-
+        
         // Load the GLTF model
         const loader = new GLTFLoader();
         let model;
@@ -82,34 +79,31 @@
         }
         animate();
 
-        // Update mouse position and set target rotation/position
-        document.addEventListener('mousemove', onDocumentMouseMove, false);
-        function onDocumentMouseMove(event) {
-            // Calculate target rotations based on mouse position
-            targetRotationY = (event.clientX - windowHalfX) / windowHalfX * 0.5;
-            targetRotationX = (event.clientY - windowHalfY) / windowHalfY * 0.5;
+        // Device orientation handler
+        function handleDeviceOrientation(event) {
+            const { alpha, beta, gamma } = event;
 
-            // Calculate target position based on mouse position
-            targetPositionX = (event.clientX - windowHalfX) / windowHalfX * 0.5;
-            targetPositionY = -(event.clientY - windowHalfY) / windowHalfY * 0.5;
+            // Update target rotation and position based on device orientation
+            targetRotationX = beta * 0.01;   // Use `beta` (tilting forward/backward)
+            targetRotationY = gamma * 0.01;  // Use `gamma` (tilting left/right)
+
+            targetPositionX = gamma * 0.01;  // Move horizontally with left/right tilt
+            targetPositionY = beta * 0.01;   // Move vertically with forward/backward tilt
         }
 
-        // Reset model's position and rotation smoothly when mouse leaves
-        document.addEventListener('mouseleave', onDocumentMouseLeave, false);
-        function onDocumentMouseLeave() {
-            // Reset to default target values
+        // Listen for device orientation events (for mobile)
+        window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+
+        // Reset model's position and rotation smoothly when window loses focus
+        window.addEventListener('blur', () => {
             targetRotationX = 0;
             targetRotationY = 0;
-
             targetPositionX = 0;
             targetPositionY = 0;
-        }
+        });
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            windowHalfX = window.innerWidth / 2;
-            windowHalfY = window.innerHeight / 2;
-
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);

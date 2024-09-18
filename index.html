@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js with Smooth Mouse Interaction</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+    <script type="module">
+        // Import Three.js and GLTFLoader from CDN
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { GLTFLoader } from 'https://unpkg.com/three@0.126.1/examples/jsm/loaders/GLTFLoader.js';
+        
+        // Basic Three.js scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Variables to track mouse position and target rotations
+        let mouseX = 0, mouseY = 0;
+        let targetRotationX = 0, targetRotationY = 0;
+        let targetPositionX = 0, targetPositionY = 0;
+        let windowHalfX = window.innerWidth / 2;
+        let windowHalfY = window.innerHeight / 2;
+
+        // Load the GLTF model
+        const loader = new GLTFLoader();
+        let model;
+
+        loader.load(
+            'https://14542817.fs1.hubspotusercontent-na1.net/hubfs/14542817/3d%20model%20files/ims%20test.gltf',  
+            function (gltf) {
+                model = gltf.scene;
+                scene.add(model);
+
+                // Position the model at the center
+                model.position.set(0, 0, 0);
+                model.scale.set(1, 1, 1);
+
+                console.log('Model loaded successfully:', model);
+            },
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error occurred while loading the model:', error);
+            }
+        );
+
+        // Set camera position
+        camera.position.z = 5;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smoothly interpolate the rotation and position towards the target values
+            if (model) {
+                model.rotation.x += (targetRotationX - model.rotation.x) * 0.05;  // Smooth rotation on X axis
+                model.rotation.y += (targetRotationY - model.rotation.y) * 0.05;  // Smooth rotation on Y axis
+
+                model.position.x += (targetPositionX - model.position.x) * 0.05;  // Smooth position on X axis
+                model.position.y += (targetPositionY - model.position.y) * 0.05;  // Smooth position on Y axis
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Update mouse position and set target rotation/position
+        document.addEventListener('mousemove', onDocumentMouseMove, false);
+        function onDocumentMouseMove(event) {
+            // Calculate target rotations based on mouse position
+            targetRotationY = (event.clientX - windowHalfX) / windowHalfX * 0.5;
+            targetRotationX = (event.clientY - windowHalfY) / windowHalfY * 0.5;
+
+            // Calculate target position based on mouse position
+            targetPositionX = (event.clientX - windowHalfX) / windowHalfX * 0.5;
+            targetPositionY = -(event.clientY - windowHalfY) / windowHalfY * 0.5;
+        }
+
+        // Reset model's position and rotation smoothly when mouse leaves
+        document.addEventListener('mouseleave', onDocumentMouseLeave, false);
+        function onDocumentMouseLeave() {
+            // Reset to default target values
+            targetRotationX = 0;
+            targetRotationY = 0;
+
+            targetPositionX = 0;
+            targetPositionY = 0;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+</body>
+</html>

@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js with Mouse and Gyroscope Interaction and Animated Fox</title>
+    <title>Three.js with Subsurface Scattering and Animated Fox</title>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; background: pink; }
         canvas { display: block; }
         #info {
             position: absolute;
@@ -37,12 +37,13 @@
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { GLTFLoader } from 'https://unpkg.com/three@0.126.1/examples/jsm/loaders/GLTFLoader.js';
-        
+
         // Basic Three.js scene setup
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;  // Better color management
         document.body.appendChild(renderer.domElement);
 
         // Add ambient lighting (soft, all-around light)
@@ -72,26 +73,40 @@
         let windowHalfX = window.innerWidth / 2;
         let windowHalfY = window.innerHeight / 2;
 
+        // Material with Subsurface Scattering properties (using MeshPhysicalMaterial)
+        const sssMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffe0bd,  // Skin-like color
+            roughness: 0.3,
+            metalness: 0,
+            sheen: 0.5,  // Adds a sheen effect
+            transmission: 0.9,  // Allows light to pass through the material
+            thickness: 1,  // Thickness of the object for light scattering
+            clearcoat: 0.8,  // Adds a glossy effect to the surface
+            clearcoatRoughness: 0.1,  // Smoothness of the clear coat
+        });
+
         // Load the Fox GLTF model from URL
         const loader = new GLTFLoader();
         loader.load(
             'https://14542817.fs1.hubspotusercontent-na1.net/hubfs/14542817/3d%20model%20files/fox_test/Fox.gltf',  // Online GLTF file
             function (gltf) {
                 model = gltf.scene;
+
+                // Apply subsurface scattering material to the model
+                model.traverse(function (node) {
+                    if (node.isMesh) {
+                        node.material = sssMaterial;  // Apply the SSS material to the model
+                        node.castShadow = true;  // Allow the model to cast shadows
+                        node.receiveShadow = true;  // Allow the model to receive shadows
+                    }
+                });
+
                 scene.add(model);
 
                 // Initialize the animation mixer for the model
                 mixer = new THREE.AnimationMixer(model);
                 gltf.animations.forEach((clip) => {
                     mixer.clipAction(clip).play();  // Play all available animations
-                });
-
-                // Enable shadow casting for all model parts
-                model.traverse(function (node) {
-                    if (node.isMesh) {
-                        node.castShadow = true;  // Allow the model to cast shadows
-                        node.receiveShadow = true;  // Allow the model to receive shadows
-                    }
                 });
 
                 // Position and scale the model in the scene
